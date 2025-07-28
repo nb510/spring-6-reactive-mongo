@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @Builder
 public class Customer {
     @Id
-    private Integer id;
+    private String id;
 
     @Size(max = 255)
     private String customerName;
