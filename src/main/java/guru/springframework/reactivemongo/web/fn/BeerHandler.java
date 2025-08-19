@@ -5,9 +5,13 @@ import guru.springframework.reactivemongo.service.BeerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.server.ServerWebInputException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
@@ -18,6 +22,16 @@ import static guru.springframework.reactivemongo.web.fn.BeerRouterConfig.BEER_PA
 public class BeerHandler {
 
     public final BeerService beerService;
+    private final Validator validator;
+
+    public void validate(BeerDTO beerDTO) {
+        Errors errors = new BeanPropertyBindingResult(BeerDTO.class, "beerDto");
+        validator.validate(beerDTO, errors);
+
+        if (errors.hasErrors()) {
+            throw new ServerWebInputException(errors.toString());
+        }
+    }
 
     public Mono<ServerResponse> listBeers(ServerRequest request) {
         if (request.queryParam("style").isPresent()) {
@@ -37,6 +51,7 @@ public class BeerHandler {
 
     public Mono<ServerResponse> createBeer(ServerRequest request) {
         return beerService.saveBeer(request.bodyToMono(BeerDTO.class))
+                .doOnNext(this::validate)
                 .flatMap(beerDTO -> ServerResponse
                         .created(UriComponentsBuilder
                                 .fromPath(BEER_PATH_ID)
@@ -47,6 +62,7 @@ public class BeerHandler {
 
     public Mono<ServerResponse> updateBeer(ServerRequest request) {
         return request.bodyToMono(BeerDTO.class)
+                .doOnNext(this::validate)
                 .flatMap(beerDTO -> beerService.updateBeer(request.pathVariable("beerId"), beerDTO))
                 .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)))
                 .flatMap(ignored -> ServerResponse.noContent().build());

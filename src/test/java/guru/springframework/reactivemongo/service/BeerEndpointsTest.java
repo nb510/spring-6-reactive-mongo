@@ -1,5 +1,6 @@
 package guru.springframework.reactivemongo.service;
 
+import guru.springframework.reactivemongo.domain.Beer;
 import guru.springframework.reactivemongo.mappers.BeerMapper;
 import guru.springframework.reactivemongo.model.BeerDTO;
 import org.junit.jupiter.api.MethodOrderer;
@@ -120,6 +121,28 @@ public class BeerEndpointsTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.size()").isEqualTo(3);
+    }
+
+    @Test
+    void testUpdateWrongData() {
+        BeerDTO createdBeer = createTestBeer();
+        createdBeer.setBeerName("");
+
+        webTestClient.put().uri(BEER_PATH_ID, createdBeer.getId())
+                .body(Mono.just(createdBeer), BeerDTO.class)
+                .exchange()
+                .expectStatus().isBadRequest();
+    }
+
+    @Test
+    void testCreateWrongData() {
+        BeerDTO beerDTO = beerMapper.beerToBeerDto(getTestBeer());
+        beerDTO.setBeerName("");
+
+        webTestClient.post().uri(BEER_PATH)
+                .body(Mono.just(beerDTO), BeerDTO.class)
+                .exchange()
+                .expectStatus().isBadRequest();
     }
 
     public BeerDTO createTestBeer() {
