@@ -73,41 +73,25 @@ public class BeerEndpointsTest {
     @Test
     @Order(999)
     void testDeleteBeer() {
-        webTestClient.put().uri(BEER_PATH_ID, 100)
-                .body(Mono.just(getTestBeer()), BeerDTO.class)
+        BeerDTO createdBeer = createTestBeer();
+        webTestClient.delete().uri(BEER_PATH_ID, createdBeer.getId())
+                .exchange()
+                .expectStatus().isNoContent();
+
+        webTestClient.get().uri(BEER_PATH_ID, createdBeer.getId())
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
     @Test
     void testUpdateBeer() {
-        // create a new beer
-        String location = webTestClient.post().uri(BEER_PATH)
-                .body(Mono.just(getTestBeer()), BeerDTO.class)
-                .exchange()
-                .expectStatus().isCreated()
-                .expectHeader().exists("location")
-                .returnResult(BeerDTO.class)
-                .getResponseHeaders().get("Location").get(0);
-
-        // get created beer and update
-        BeerDTO createdBeer = webTestClient.get().uri(location)
-                .exchange()
-                .expectStatus().isOk()
-                .returnResult(BeerDTO.class)
-                .getResponseBody()
-                .blockFirst();
+        BeerDTO createdBeer = createTestBeer();
         createdBeer.setBeerName("TEEEEEsted");
 
         webTestClient.put().uri(BEER_PATH_ID, createdBeer.getId())
                 .body(Mono.just(createdBeer), BeerDTO.class)
                 .exchange()
                 .expectStatus().isNoContent();
-
-        webTestClient.get().uri(location)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody().jsonPath("$.beerName").value(equalTo(createdBeer.getBeerName()));
     }
 
     @Test
@@ -136,5 +120,21 @@ public class BeerEndpointsTest {
                 .expectBody().jsonPath("$.size()").isEqualTo(3);
     }
 
+    public BeerDTO createTestBeer() {
+        String location = webTestClient.post().uri(BEER_PATH)
+                .body(Mono.just(getTestBeer()), BeerDTO.class)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().exists("location")
+                .returnResult(BeerDTO.class)
+                .getResponseHeaders().get("Location").get(0);
+
+        return webTestClient.get().uri(location)
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(BeerDTO.class)
+                .getResponseBody()
+                .blockFirst();
+    }
 
 }

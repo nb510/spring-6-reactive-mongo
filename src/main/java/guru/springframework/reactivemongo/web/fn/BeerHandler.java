@@ -3,9 +3,11 @@ package guru.springframework.reactivemongo.web.fn;
 import guru.springframework.reactivemongo.model.BeerDTO;
 import guru.springframework.reactivemongo.service.BeerService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
 
@@ -45,5 +47,10 @@ public class BeerHandler {
         return request.bodyToMono(BeerDTO.class)
                 .flatMap(beerDTO -> beerService.updateBeer(request.pathVariable("beerId"), beerDTO))
                 .flatMap(beerDTO -> ServerResponse.noContent().build());
+    }
+
+    public Mono<ServerResponse> deleteBeer(ServerRequest request) {
+        return beerService.deleteBeer(request.pathVariable("beerId"))
+                .then(ServerResponse.noContent().build());
     }
 }
