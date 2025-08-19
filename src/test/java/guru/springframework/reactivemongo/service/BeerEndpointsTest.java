@@ -2,7 +2,6 @@ package guru.springframework.reactivemongo.service;
 
 import guru.springframework.reactivemongo.mappers.BeerMapper;
 import guru.springframework.reactivemongo.model.BeerDTO;
-import guru.springframework.reactivemongo.web.fn.BeerRouterConfig;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -11,7 +10,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.test.web.reactive.server.FluxExchangeResult;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.testcontainers.containers.MongoDBContainer;
@@ -19,13 +17,10 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.core.publisher.Mono;
 
-import java.util.List;
-
 import static guru.springframework.reactivemongo.service.BeerServiceImplTest.getTestBeer;
 import static guru.springframework.reactivemongo.web.fn.BeerRouterConfig.BEER_PATH;
 import static guru.springframework.reactivemongo.web.fn.BeerRouterConfig.BEER_PATH_ID;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.greaterThan;
 
 @SpringBootTest
 @Testcontainers
@@ -86,10 +81,33 @@ public class BeerEndpointsTest {
 
     @Test
     void testUpdateBeer() {
-        webTestClient.put().uri(BEER_PATH_ID, 1)
+        // create a new beer
+        String location = webTestClient.post().uri(BEER_PATH)
                 .body(Mono.just(getTestBeer()), BeerDTO.class)
                 .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().exists("location")
+                .returnResult(BeerDTO.class)
+                .getResponseHeaders().get("Location").get(0);
+
+        // get created beer and update
+        BeerDTO createdBeer = webTestClient.get().uri(location)
+                .exchange()
+                .expectStatus().isOk()
+                .returnResult(BeerDTO.class)
+                .getResponseBody()
+                .blockFirst();
+        createdBeer.setBeerName("TEEEEEsted");
+
+        webTestClient.put().uri(BEER_PATH_ID, createdBeer.getId())
+                .body(Mono.just(createdBeer), BeerDTO.class)
+                .exchange()
                 .expectStatus().isNoContent();
+
+        webTestClient.get().uri(location)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.beerName").value(equalTo(createdBeer.getBeerName()));
     }
 
     @Test
