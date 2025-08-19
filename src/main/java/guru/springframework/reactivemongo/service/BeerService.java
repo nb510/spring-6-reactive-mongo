@@ -11,4 +11,6 @@ public interface BeerService {
     Mono<BeerDTO> getById(String beerId);
 
     Flux<BeerDTO> listBeers();
+
+    Flux<BeerDTO> getBeerByStyle(String beerStyle);
 }

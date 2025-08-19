@@ -18,6 +18,11 @@ public class BeerHandler {
     public final BeerService beerService;
 
     public Mono<ServerResponse> listBeers(ServerRequest request) {
+        if (request.queryParam("style").isPresent()) {
+            return ServerResponse.ok()
+                    .body(beerService.getBeerByStyle(request.queryParam("style").get()), BeerDTO.class);
+        }
+
         return ServerResponse.ok().body(beerService.listBeers(), BeerDTO.class);
     }
 
