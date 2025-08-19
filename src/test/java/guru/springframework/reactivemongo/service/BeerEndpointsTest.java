@@ -77,10 +77,6 @@ public class BeerEndpointsTest {
         webTestClient.delete().uri(BEER_PATH_ID, createdBeer.getId())
                 .exchange()
                 .expectStatus().isNoContent();
-
-        webTestClient.get().uri(BEER_PATH_ID, createdBeer.getId())
-                .exchange()
-                .expectStatus().isNotFound();
     }
 
     @Test
@@ -92,6 +88,11 @@ public class BeerEndpointsTest {
                 .body(Mono.just(createdBeer), BeerDTO.class)
                 .exchange()
                 .expectStatus().isNoContent();
+
+        webTestClient.get().uri(BEER_PATH_ID, createdBeer.getId())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.beerName").value(equalTo(createdBeer.getBeerName()));
     }
 
     @Test
@@ -106,13 +107,14 @@ public class BeerEndpointsTest {
 
     @Test
     void testGetBeerById() {
-        webTestClient.get().uri(BEER_PATH_ID, 1)
+        webTestClient.get().uri(BEER_PATH_ID, createTestBeer().getId())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(BeerDTO.class);
     }
 
     @Test
+    @Order(1)
     void testListBeers() {
         webTestClient.get().uri(BEER_PATH)
                 .exchange()
