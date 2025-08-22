@@ -1,6 +1,5 @@
 package guru.springframework.reactivemongo.service;
 
-import guru.springframework.reactivemongo.domain.Beer;
 import guru.springframework.reactivemongo.mappers.BeerMapper;
 import guru.springframework.reactivemongo.model.BeerDTO;
 import org.junit.jupiter.api.MethodOrderer;
@@ -22,6 +21,7 @@ import static guru.springframework.reactivemongo.service.BeerServiceImplTest.get
 import static guru.springframework.reactivemongo.web.fn.BeerRouterConfig.BEER_PATH;
 import static guru.springframework.reactivemongo.web.fn.BeerRouterConfig.BEER_PATH_ID;
 import static org.hamcrest.Matchers.equalTo;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockOAuth2Login;
 
 @SpringBootTest
 @Testcontainers
@@ -45,12 +45,14 @@ public class BeerEndpointsTest {
         beerDto.setBeerStyle("Test");
 
         for (int i = 0; i < 4; i++) {
-            webTestClient.post().uri(BEER_PATH)
+            webTestClient.mutateWith(mockOAuth2Login())
+                    .post().uri(BEER_PATH)
                     .body(Mono.just(beerDto), BeerDTO.class)
                     .exchange();
         }
 
-        webTestClient.get().uri(UriComponentsBuilder.fromPath(BEER_PATH)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(UriComponentsBuilder.fromPath(BEER_PATH)
                         .queryParam("style", beerDto.getBeerStyle()).build().toUri())
                 .exchange()
                 .expectStatus().isOk()
@@ -59,14 +61,16 @@ public class BeerEndpointsTest {
 
     @Test
     void testBeerNotFound() {
-        webTestClient.get().uri(BEER_PATH_ID, 100)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(BEER_PATH_ID, 100)
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
     @Test
     void testUpdateBeerNotFound() {
-        webTestClient.get().uri(BEER_PATH_ID, 100)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(BEER_PATH_ID, 100)
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -75,7 +79,8 @@ public class BeerEndpointsTest {
     @Order(999)
     void testDeleteBeer() {
         BeerDTO createdBeer = createTestBeer();
-        webTestClient.delete().uri(BEER_PATH_ID, createdBeer.getId())
+        webTestClient.mutateWith(mockOAuth2Login())
+                .delete().uri(BEER_PATH_ID, createdBeer.getId())
                 .exchange()
                 .expectStatus().isNoContent();
     }
@@ -85,12 +90,14 @@ public class BeerEndpointsTest {
         BeerDTO createdBeer = createTestBeer();
         createdBeer.setBeerName("TEEEEEsted");
 
-        webTestClient.put().uri(BEER_PATH_ID, createdBeer.getId())
+        webTestClient.mutateWith(mockOAuth2Login())
+                .put().uri(BEER_PATH_ID, createdBeer.getId())
                 .body(Mono.just(createdBeer), BeerDTO.class)
                 .exchange()
                 .expectStatus().isNoContent();
 
-        webTestClient.get().uri(BEER_PATH_ID, createdBeer.getId())
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(BEER_PATH_ID, createdBeer.getId())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.beerName").value(equalTo(createdBeer.getBeerName()));
@@ -98,7 +105,8 @@ public class BeerEndpointsTest {
 
     @Test
     void testCreateBeer() {
-        webTestClient.post().uri(BEER_PATH)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .post().uri(BEER_PATH)
                 .body(Mono.just(getTestBeer()), BeerDTO.class)
                 .exchange()
                 .expectStatus().isCreated()
@@ -108,7 +116,8 @@ public class BeerEndpointsTest {
 
     @Test
     void testGetBeerById() {
-        webTestClient.get().uri(BEER_PATH_ID, createTestBeer().getId())
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(BEER_PATH_ID, createTestBeer().getId())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody(BeerDTO.class);
@@ -117,7 +126,8 @@ public class BeerEndpointsTest {
     @Test
     @Order(1)
     void testListBeers() {
-        webTestClient.get().uri(BEER_PATH)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(BEER_PATH)
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody().jsonPath("$.size()").isEqualTo(3);
@@ -128,7 +138,8 @@ public class BeerEndpointsTest {
         BeerDTO createdBeer = createTestBeer();
         createdBeer.setBeerName("");
 
-        webTestClient.put().uri(BEER_PATH_ID, createdBeer.getId())
+        webTestClient.mutateWith(mockOAuth2Login())
+                .put().uri(BEER_PATH_ID, createdBeer.getId())
                 .body(Mono.just(createdBeer), BeerDTO.class)
                 .exchange()
                 .expectStatus().isBadRequest();
@@ -139,14 +150,16 @@ public class BeerEndpointsTest {
         BeerDTO beerDTO = beerMapper.beerToBeerDto(getTestBeer());
         beerDTO.setBeerName("");
 
-        webTestClient.post().uri(BEER_PATH)
+        webTestClient.mutateWith(mockOAuth2Login())
+                .post().uri(BEER_PATH)
                 .body(Mono.just(beerDTO), BeerDTO.class)
                 .exchange()
                 .expectStatus().isBadRequest();
     }
 
     public BeerDTO createTestBeer() {
-        String location = webTestClient.post().uri(BEER_PATH)
+        String location = webTestClient.mutateWith(mockOAuth2Login())
+                .post().uri(BEER_PATH)
                 .body(Mono.just(getTestBeer()), BeerDTO.class)
                 .exchange()
                 .expectStatus().isCreated()
@@ -154,7 +167,8 @@ public class BeerEndpointsTest {
                 .returnResult(BeerDTO.class)
                 .getResponseHeaders().get("Location").get(0);
 
-        return webTestClient.get().uri(location)
+        return webTestClient.mutateWith(mockOAuth2Login())
+                .get().uri(location)
                 .exchange()
                 .expectStatus().isOk()
                 .returnResult(BeerDTO.class)
